@@ -1,0 +1,55 @@
+diff --git a/src/tot/prompts/game24.py b/src/tot/prompts/game24.py
+index 71cd374..ab89292 100644
+--- a/src/tot/prompts/game24.py
++++ b/src/tot/prompts/game24.py
+@@ -14,7 +14,7 @@ Input: {input}
+ '''
+ 
+ # 5-shot
+-cot_prompt = '''Use numbers and basic arithmetic operations (+ - * /) to obtain 24. Each step, you are only allowed to choose two of the remaining numbers to obtain a new number.
++cot_prompt = '''Use numbers and basic arithmetic operations (+ - * /) to obtain 24. Each step, choose two of the remaining numbers to obtain a new number. Write steps in the form "a op b = c (left: x y z)" and end with "Answer: <expression> = 24". Use * for multiplication and / for division, separate numbers with spaces, no markdown, no explanations.
+ Input: 4 4 6 8
+ Steps:
+ 4 + 8 = 12 (left: 4 6 12)
+@@ -49,7 +49,14 @@ Input: {input}
+ '''
+ 
+ # 1-shot
+-propose_prompt = '''Input: 2 8 8 14
++propose_prompt = '''You are playing the 24 game. Given a list of numbers, list every possible next step: pick two of the numbers, apply one operation (+ - * /), and show the result and the numbers left over.
++
++Output ONLY lines in this exact form, one per line, nothing else:
++a op b = c (left: x y z)
++
++Rules: use * for multiplication and / for division; separate the left-over numbers with single spaces; no markdown, no bullets, no numbering, no commas, no explanation.
++
++Input: 2 8 8 14
+ Possible next steps:
+ 2 + 8 = 10 (left: 8 10 14)
+ 8 / 2 = 4 (left: 4 8 14)
+@@ -57,13 +64,14 @@ Possible next steps:
+ 2 * 8 = 16 (left: 8 14 16)
+ 8 - 2 = 6 (left: 6 8 14)
+ 14 - 8 = 6 (left: 2 6 8)
+-14 /  2 = 7 (left: 7 8 8)
++14 / 2 = 7 (left: 7 8 8)
+ 14 - 2 = 12 (left: 8 8 12)
++
+ Input: {input}
+ Possible next steps:
+ '''
+ 
+-value_prompt = '''Evaluate if given numbers can reach 24 (sure/likely/impossible)
++value_prompt = '''Evaluate if the given numbers can reach 24 using + - * /. End your answer with exactly one verdict word on its own final line: sure, likely, or impossible. Do not write anything after the verdict.
+ 10 14
+ 10 + 14 = 24
+ sure
+@@ -104,7 +112,7 @@ impossible
+ {input}
+ '''
+ 
+-value_last_step_prompt = '''Use numbers and basic arithmetic operations (+ - * /) to obtain 24. Given an input and an answer, give a judgement (sure/impossible) if the answer is correct, i.e. it uses each input exactly once and no other numbers, and reach 24.
++value_last_step_prompt = '''Use numbers and basic arithmetic operations (+ - * /) to obtain 24. Given an input and an answer, judge whether the answer is correct (it uses each input exactly once, no other numbers, and reaches 24). Reply with exactly one word: sure or impossible.
+ Input: 4 4 6 8
+ Answer: (4 + 8) * (6 - 4) = 24
+ Judge: 

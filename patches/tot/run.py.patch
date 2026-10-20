@@ -1,0 +1,13 @@
+diff --git a/run.py b/run.py
+index e4b6777..7558913 100644
+--- a/run.py
++++ b/run.py
+@@ -42,7 +42,7 @@ def run(args):
+ 
+ def parse_args():
+     args = argparse.ArgumentParser()
+-    args.add_argument('--backend', type=str, choices=['gpt-4', 'gpt-3.5-turbo', 'gpt-4o'], default='gpt-4')
++    args.add_argument('--backend', type=str, choices=['gpt-4', 'gpt-3.5-turbo', 'gpt-4o', 'deepseek-chat'], default='deepseek-chat')
+     args.add_argument('--temperature', type=float, default=0.7)
+ 
+     args.add_argument('--task', type=str, required=True, choices=['game24', 'text', 'crosswords'])

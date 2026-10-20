@@ -1,0 +1,94 @@
+diff --git a/src/tot/models.py b/src/tot/models.py
+index 709085f..2f23fd3 100644
+--- a/src/tot/models.py
++++ b/src/tot/models.py
+@@ -1,47 +1,54 @@
+ import os
+ import openai
+-import backoff 
+ 
+ completion_tokens = prompt_tokens = 0
+ 
+-api_key = os.getenv("OPENAI_API_KEY", "")
+-if api_key != "":
+-    openai.api_key = api_key
+-else:
+-    print("Warning: OPENAI_API_KEY is not set")
+-    
+-api_base = os.getenv("OPENAI_API_BASE", "")
+-if api_base != "":
+-    print("Warning: OPENAI_API_BASE is set to {}".format(api_base))
+-    openai.api_base = api_base
+-
+-@backoff.on_exception(backoff.expo, openai.error.OpenAIError)
+-def completions_with_backoff(**kwargs):
+-    return openai.ChatCompletion.create(**kwargs)
+-
+-def gpt(prompt, model="gpt-4", temperature=0.7, max_tokens=1000, n=1, stop=None) -> list:
++# DeepSeek-compatible OpenAI client. Key comes from the environment only
++# (AGENTS.md: never hardcode or commit API keys).
++_api_key = os.getenv("DEEPSEEK_API_KEY", os.getenv("OPENAI_API_KEY", ""))
++_base_url = os.getenv("OPENAI_API_BASE", "https://api.deepseek.com")
++_client = None
++
++
++def _get_client():
++    global _client
++    if _client is None:
++        if not _api_key:
++            raise RuntimeError(
++                "Missing DEEPSEEK_API_KEY. Set it before running, e.g.:\n"
++                "  export DEEPSEEK_API_KEY='sk-...'"
++            )
++        _client = openai.OpenAI(api_key=_api_key, base_url=_base_url, timeout=60, max_retries=2)
++    return _client
++
++
++def gpt(prompt, model="deepseek-chat", temperature=0.7, max_tokens=1000, n=1, stop=None) -> list:
+     messages = [{"role": "user", "content": prompt}]
+     return chatgpt(messages, model=model, temperature=temperature, max_tokens=max_tokens, n=n, stop=stop)
+-    
+-def chatgpt(messages, model="gpt-4", temperature=0.7, max_tokens=1000, n=1, stop=None) -> list:
++
++
++def chatgpt(messages, model="deepseek-chat", temperature=0.7, max_tokens=1000, n=1, stop=None) -> list:
+     global completion_tokens, prompt_tokens
++    client = _get_client()
+     outputs = []
+-    while n > 0:
+-        cnt = min(n, 20)
+-        n -= cnt
+-        res = completions_with_backoff(model=model, messages=messages, temperature=temperature, max_tokens=max_tokens, n=cnt, stop=stop)
+-        outputs.extend([choice.message.content for choice in res.choices])
+-        # log completion tokens
+-        completion_tokens += res.usage.completion_tokens
+-        prompt_tokens += res.usage.prompt_tokens
++    # DeepSeek only supports n=1 per request, so loop n times instead of one n-way call.
++    for _ in range(n):
++        res = client.chat.completions.create(
++            model=model,
++            messages=messages,
++            temperature=temperature,
++            max_tokens=max_tokens,
++            stop=stop,
++        )
++        outputs.append(res.choices[0].message.content)
++        if res.usage is not None:
++            completion_tokens += res.usage.completion_tokens
++            prompt_tokens += res.usage.prompt_tokens
+     return outputs
+-    
+-def gpt_usage(backend="gpt-4"):
++
++
++def gpt_usage(backend="deepseek-chat"):
+     global completion_tokens, prompt_tokens
+-    if backend == "gpt-4":
+-        cost = completion_tokens / 1000 * 0.06 + prompt_tokens / 1000 * 0.03
+-    elif backend == "gpt-3.5-turbo":
+-        cost = completion_tokens / 1000 * 0.002 + prompt_tokens / 1000 * 0.0015
+-    elif backend == "gpt-4o":
+-        cost = completion_tokens / 1000 * 0.00250 + prompt_tokens / 1000 * 0.01
++    # Approximate deepseek-chat pricing (USD per 1M tokens). Verify current rates.
++    cost = completion_tokens / 1_000_000 * 1.10 + prompt_tokens / 1_000_000 * 0.27
+     return {"completion_tokens": completion_tokens, "prompt_tokens": prompt_tokens, "cost": cost}
